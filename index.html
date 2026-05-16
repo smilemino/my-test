@@ -1,167 +1,641 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>주사위 굴리기</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Tetris</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; }
+  :root {
+    --bg: #0b0d1a;
+    --panel: #151a2e;
+    --panel-2: #1d2340;
+    --border: #2a3158;
+    --text: #e8ecff;
+    --muted: #8b95c4;
+    --accent: #61dafb;
+    --grid: #1a1f3a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: radial-gradient(ellipse at top, #1a1f3a 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
-    background: radial-gradient(ellipse at center, #2a3b5c 0%, #0f1626 100%);
-    color: #f5f7fb;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    user-select: none; cursor: pointer;
-    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
   }
-  .hint { position: fixed; top: 5vh; font-size: clamp(14px, 3.5vw, 18px); opacity: 0.75; letter-spacing: 0.02em; }
   .stage {
-    perspective: 1200px;
-    display: flex; gap: clamp(20px, 6vw, 60px);
-    padding: 40px 20px;
-  }
-  .dice {
-    width: clamp(80px, 22vw, 130px);
-    height: clamp(80px, 22vw, 130px);
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 1.6s cubic-bezier(0.2, 0.7, 0.2, 1.0);
-    transform: rotateX(-20deg) rotateY(25deg);
-  }
-  .dice.rolling { transition: none; }
-  .face {
-    position: absolute; inset: 0;
-    background: linear-gradient(145deg, #ffffff 0%, #e8ebf2 100%);
-    border-radius: 14%;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04), inset -6px -6px 16px rgba(0,0,0,0.08);
     display: grid;
-    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-    padding: 12%; gap: 4%;
+    grid-template-columns: 110px auto 130px;
+    gap: 14px;
+    align-items: start;
   }
-  .pip {
-    background: radial-gradient(circle at 35% 35%, #4a5366 0%, #1a1f2b 80%);
-    border-radius: 50%; align-self: center; justify-self: center;
-    width: 80%; height: 80%;
+  .col-side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  .pip.hidden { visibility: hidden; }
-  .face.f1 { transform: translateZ(var(--s)); }
-  .face.f6 { transform: rotateY(180deg) translateZ(var(--s)); }
-  .face.f3 { transform: rotateY(90deg)  translateZ(var(--s)); }
-  .face.f4 { transform: rotateY(-90deg) translateZ(var(--s)); }
-  .face.f2 { transform: rotateX(90deg)  translateZ(var(--s)); }
-  .face.f5 { transform: rotateX(-90deg) translateZ(var(--s)); }
-  .dice { --s: calc(clamp(80px, 22vw, 130px) / 2); }
   .panel {
-    position: fixed; bottom: 8vh;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   }
-  .sum-label { font-size: clamp(12px, 3vw, 14px); opacity: 0.6; letter-spacing: 0.15em; }
-  .sum-value {
-    font-size: clamp(40px, 11vw, 64px); font-weight: 700;
-    background: linear-gradient(180deg, #ffffff, #b8c4dc);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    min-width: 1.5em; text-align: center;
-    transition: transform 0.3s; transform-origin: center;
+  .panel h3 {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
   }
-  .sum-value.pop { animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  @keyframes pop { 0% { transform: scale(0.5); opacity: 0.3; } 100% { transform: scale(1); opacity: 1; } }
-  @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-3px, 2px); } 75% { transform: translate(3px, -2px); } }
-  .stage.shake { animation: shake 0.15s ease-in-out 3; }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .board-wrap {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+  canvas { display: block; image-rendering: pixelated; }
+  #board { background: var(--grid); border-radius: 6px; }
+  .mini { background: var(--panel-2); border-radius: 6px; display: block; margin: 0 auto; }
+  .overlay {
+    position: absolute;
+    inset: 6px;
+    border-radius: 6px;
+    background: rgba(11, 13, 26, 0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    backdrop-filter: blur(4px);
+    z-index: 5;
+  }
+  .overlay.show { display: flex; }
+  .overlay h1 {
+    font-size: 26px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+  .overlay p { color: var(--muted); font-size: 13px; text-align: center; line-height: 1.6; padding: 0 12px; }
+  .btn {
+    background: var(--accent);
+    color: #0b0d1a;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .keys {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .keys b { color: var(--text); display: inline-block; min-width: 50px; }
+  .next-list { display: flex; flex-direction: column; gap: 4px; }
+  .touch-controls {
+    display: none;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .touch-controls button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .touch-controls button:active { background: var(--accent); color: #0b0d1a; }
+  @media (max-width: 720px) {
+    .stage { grid-template-columns: 80px auto 90px; gap: 8px; }
+    .panel { padding: 8px; }
+    .stat-value { font-size: 16px; }
+    .touch-controls { display: grid; }
+    .keys { display: none; }
+  }
 </style>
 </head>
 <body>
-  <div class="hint">화면을 누르거나 탭하세요</div>
-  <div class="stage" id="stage">
-    <div class="dice" id="d1"></div>
-    <div class="dice" id="d2"></div>
+  <div class="stage">
+    <div class="col-side">
+      <div class="panel">
+        <h3>HOLD</h3>
+        <canvas id="hold" class="mini" width="90" height="64"></canvas>
+      </div>
+      <div class="panel">
+        <h3>SCORE</h3>
+        <div class="stat-value" id="score">0</div>
+      </div>
+      <div class="panel">
+        <h3>LEVEL</h3>
+        <div class="stat-value" id="level">1</div>
+      </div>
+      <div class="panel">
+        <h3>LINES</h3>
+        <div class="stat-value" id="lines">0</div>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="300" height="600"></canvas>
+      <div class="overlay" id="overlay">
+        <h1 id="overlayTitle">TETRIS</h1>
+        <p id="overlayMsg">시작하려면 START 또는 Enter</p>
+        <button class="btn" id="startBtn">START</button>
+      </div>
+      <div class="touch-controls">
+        <button data-act="left">◀</button>
+        <button data-act="rotate">⟳</button>
+        <button data-act="down">▼</button>
+        <button data-act="hold">H</button>
+        <button data-act="drop">⤓</button>
+        <button data-act="right">▶</button>
+        <button data-act="pause" style="grid-column: span 5;">PAUSE</button>
+      </div>
+    </div>
+
+    <div class="col-side">
+      <div class="panel">
+        <h3>NEXT</h3>
+        <div class="next-list">
+          <canvas id="next0" class="mini" width="100" height="68"></canvas>
+          <canvas id="next1" class="mini" width="100" height="60"></canvas>
+          <canvas id="next2" class="mini" width="100" height="60"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>KEYS</h3>
+        <div class="keys">
+          <b>← →</b> 이동<br>
+          <b>↓</b> 소프트<br>
+          <b>↑</b> 회전<br>
+          <b>Space</b> 하드드롭<br>
+          <b>Shift</b> 홀드<br>
+          <b>P</b> 일시정지
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="panel">
-    <div class="sum-label">SUM</div>
-    <div class="sum-value" id="sum">—</div>
-  </div>
+
 <script>
-  const PIP_MAP = {
-    1: [0,0,0,0,1,0,0,0,0],
-    2: [1,0,0,0,0,0,0,0,1],
-    3: [1,0,0,0,1,0,0,0,1],
-    4: [1,0,1,0,0,0,1,0,1],
-    5: [1,0,1,0,1,0,1,0,1],
-    6: [1,0,1,1,0,1,1,0,1],
+(() => {
+  const COLS = 10, ROWS = 20, CELL = 30;
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+
+  const SHAPES = {
+    I: { color: '#00f0f0', states: [
+      [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+      [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],
+      [[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0]],
+      [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]],
+    ]},
+    O: { color: '#f0f000', states: [
+      [[1,1],[1,1]],[[1,1],[1,1]],[[1,1],[1,1]],[[1,1],[1,1]],
+    ]},
+    T: { color: '#a000f0', states: [
+      [[0,1,0],[1,1,1],[0,0,0]],
+      [[0,1,0],[0,1,1],[0,1,0]],
+      [[0,0,0],[1,1,1],[0,1,0]],
+      [[0,1,0],[1,1,0],[0,1,0]],
+    ]},
+    S: { color: '#00f000', states: [
+      [[0,1,1],[1,1,0],[0,0,0]],
+      [[0,1,0],[0,1,1],[0,0,1]],
+      [[0,0,0],[0,1,1],[1,1,0]],
+      [[1,0,0],[1,1,0],[0,1,0]],
+    ]},
+    Z: { color: '#f00000', states: [
+      [[1,1,0],[0,1,1],[0,0,0]],
+      [[0,0,1],[0,1,1],[0,1,0]],
+      [[0,0,0],[1,1,0],[0,1,1]],
+      [[0,1,0],[1,1,0],[1,0,0]],
+    ]},
+    J: { color: '#0000f0', states: [
+      [[1,0,0],[1,1,1],[0,0,0]],
+      [[0,1,1],[0,1,0],[0,1,0]],
+      [[0,0,0],[1,1,1],[0,0,1]],
+      [[0,1,0],[0,1,0],[1,1,0]],
+    ]},
+    L: { color: '#f0a000', states: [
+      [[0,0,1],[1,1,1],[0,0,0]],
+      [[0,1,0],[0,1,0],[0,1,1]],
+      [[0,0,0],[1,1,1],[1,0,0]],
+      [[1,1,0],[0,1,0],[0,1,0]],
+    ]},
   };
-  const FACE_ROT = {
-    1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 5: [90, 0],
+  const PIECE_KEYS = ['I','O','T','S','Z','J','L'];
+
+  const KICKS_JLSTZ = {
+    '01': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '10': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '12': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '21': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '23': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '32': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '30': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '03': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
   };
-  function buildDice(el) {
-    el.innerHTML = '';
-    for (let n = 1; n <= 6; n++) {
-      const face = document.createElement('div');
-      face.className = 'face f' + n;
-      PIP_MAP[n].forEach(v => {
-        const p = document.createElement('div');
-        p.className = 'pip' + (v ? '' : ' hidden');
-        face.appendChild(p);
-      });
-      el.appendChild(face);
+  const KICKS_I = {
+    '01': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    '10': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    '12': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+    '21': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    '23': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    '32': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    '30': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    '03': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+  };
+
+  const GRAVITY_MS = [1000, 793, 618, 473, 355, 262, 190, 135, 94, 64, 43, 28, 18, 11, 7, 4];
+  const LOCK_DELAY = 500;
+
+  let board, current, hold, holdUsed, bag, nextQueue;
+  let score, lines, level, dropTimer, lockTimer, lastFrame;
+  let state = 'menu';
+
+  function emptyBoard() {
+    return Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  }
+
+  function refillBag() {
+    const arr = [...PIECE_KEYS];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    bag.push(...arr);
+  }
+
+  function nextPiece() {
+    if (bag.length < 7) refillBag();
+    const key = bag.shift();
+    return {
+      key, color: SHAPES[key].color, rot: 0,
+      x: key === 'O' ? 4 : 3,
+      y: key === 'I' ? -1 : 0,
+    };
+  }
+
+  function shape(p) { return SHAPES[p.key].states[p.rot]; }
+
+  function collides(p, ox = 0, oy = 0, rot = p.rot) {
+    const s = SHAPES[p.key].states[rot];
+    for (let r = 0; r < s.length; r++) {
+      for (let c = 0; c < s[r].length; c++) {
+        if (!s[r][c]) continue;
+        const nx = p.x + c + ox, ny = p.y + r + oy;
+        if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+        if (ny >= 0 && board[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(p) {
+    const s = shape(p);
+    for (let r = 0; r < s.length; r++) {
+      for (let c = 0; c < s[r].length; c++) {
+        if (s[r][c]) {
+          const y = p.y + r, x = p.x + c;
+          if (y >= 0) board[y][x] = p.color;
+        }
+      }
     }
   }
-  const d1 = document.getElementById('d1');
-  const d2 = document.getElementById('d2');
-  const sumEl = document.getElementById('sum');
-  const stage = document.getElementById('stage');
-  buildDice(d1); buildDice(d2);
 
-  let rolling = false;
-  let spinId1, spinId2;
+  function clearLines() {
+    let cleared = 0;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r].every(v => v)) {
+        board.splice(r, 1);
+        board.unshift(Array(COLS).fill(null));
+        cleared++; r++;
+      }
+    }
+    if (cleared > 0) {
+      const points = [0, 100, 300, 500, 800][cleared] * level;
+      score += points;
+      lines += cleared;
+      const newLevel = Math.floor(lines / 10) + 1;
+      if (newLevel > level) level = newLevel;
+      updateStats();
+    }
+  }
 
-  function rollOne(el, spinHolder) {
-    const value = 1 + Math.floor(Math.random() * 6);
-    const [tx, ty] = FACE_ROT[value];
-    let rx = 0, ry = 0;
-    const spinStart = performance.now();
-    el.classList.add('rolling');
-    const tick = (now) => {
-      const t = (now - spinStart) / 1000;
-      rx = t * (540 + Math.random() * 60);
-      ry = t * (720 + Math.random() * 60);
-      el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-      spinHolder.id = requestAnimationFrame(tick);
-    };
-    spinHolder.id = requestAnimationFrame(tick);
-    return new Promise(resolve => {
-      const duration = 700 + Math.random() * 400;
-      setTimeout(() => {
-        cancelAnimationFrame(spinHolder.id);
-        el.classList.remove('rolling');
-        const finalX = tx + 360 * (3 + Math.floor(Math.random() * 2));
-        const finalY = ty + 360 * (3 + Math.floor(Math.random() * 2));
-        el.style.transform = `rotateX(${finalX}deg) rotateY(${finalY}deg)`;
-        setTimeout(() => resolve(value), 1600);
-      }, duration);
+  function rotate(dir) {
+    if (current.key === 'O') return;
+    const from = current.rot;
+    const to = (from + (dir > 0 ? 1 : 3)) % 4;
+    const kickKey = `${from}${to}`;
+    const kicks = current.key === 'I' ? KICKS_I[kickKey] : KICKS_JLSTZ[kickKey];
+    for (const [dx, dy] of kicks) {
+      if (!collides(current, dx, -dy, to)) {
+        current.x += dx; current.y += -dy; current.rot = to;
+        lockTimer = 0;
+        return;
+      }
+    }
+  }
+
+  function move(dx) {
+    if (!collides(current, dx, 0)) { current.x += dx; lockTimer = 0; }
+  }
+
+  function softDrop() {
+    if (!collides(current, 0, 1)) { current.y += 1; score += 1; updateStats(); }
+    else lockTimer = LOCK_DELAY;
+  }
+
+  function hardDrop() {
+    let dist = 0;
+    while (!collides(current, 0, dist + 1)) dist++;
+    current.y += dist;
+    score += dist * 2;
+    lockPiece();
+    updateStats();
+  }
+
+  function lockPiece() {
+    merge(current);
+    clearLines();
+    spawn();
+  }
+
+  function spawn() {
+    current = nextQueue.shift();
+    nextQueue.push(nextPiece());
+    holdUsed = false;
+    dropTimer = 0; lockTimer = 0;
+    if (collides(current)) gameOver();
+  }
+
+  function doHold() {
+    if (holdUsed) return;
+    const cur = current.key;
+    if (hold) {
+      current = { key: hold, color: SHAPES[hold].color, rot: 0,
+        x: hold === 'O' ? 4 : 3, y: hold === 'I' ? -1 : 0 };
+    } else {
+      current = nextQueue.shift();
+      nextQueue.push(nextPiece());
+    }
+    hold = cur;
+    holdUsed = true;
+    dropTimer = 0; lockTimer = 0;
+  }
+
+  function gameOver() {
+    state = 'over';
+    showOverlay('GAME OVER', `점수 ${score} · 줄 ${lines} · 레벨 ${level}`, 'RESTART');
+  }
+
+  function updateStats() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('level').textContent = level;
+    document.getElementById('lines').textContent = lines;
+  }
+
+  function drawCell(c, x, y, color, alpha = 1) {
+    c.globalAlpha = alpha;
+    c.fillStyle = color;
+    c.fillRect(x * CELL, y * CELL, CELL, CELL);
+    c.fillStyle = 'rgba(255,255,255,0.18)';
+    c.fillRect(x * CELL, y * CELL, CELL, 3);
+    c.fillStyle = 'rgba(0,0,0,0.25)';
+    c.fillRect(x * CELL, y * CELL + CELL - 3, CELL, 3);
+    c.strokeStyle = 'rgba(0,0,0,0.35)';
+    c.lineWidth = 1;
+    c.strokeRect(x * CELL + 0.5, y * CELL + 0.5, CELL - 1, CELL - 1);
+    c.globalAlpha = 1;
+  }
+
+  function draw() {
+    ctx.fillStyle = '#1a1f3a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    for (let i = 1; i < COLS; i++) {
+      ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+    }
+    for (let i = 1; i < ROWS; i++) {
+      ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+    }
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (board[r][c]) drawCell(ctx, c, r, board[r][c]);
+    if (current && state === 'playing') {
+      let d = 0;
+      while (!collides(current, 0, d + 1)) d++;
+      const s = shape(current);
+      for (let r = 0; r < s.length; r++)
+        for (let c = 0; c < s[r].length; c++)
+          if (s[r][c]) {
+            const y = current.y + r + d;
+            if (y >= 0) drawCell(ctx, current.x + c, y, current.color, 0.22);
+          }
+      for (let r = 0; r < s.length; r++)
+        for (let c = 0; c < s[r].length; c++)
+          if (s[r][c] && current.y + r >= 0)
+            drawCell(ctx, current.x + c, current.y + r, current.color);
+    }
+  }
+
+  function drawMini(canvasId, key) {
+    const c = document.getElementById(canvasId);
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    if (!key) return;
+    const s = SHAPES[key].states[0];
+    const size = 14;
+    let minR=4,maxR=-1,minC=4,maxC=-1;
+    for (let r=0;r<s.length;r++) for (let cc=0;cc<s[r].length;cc++) if (s[r][cc]) {
+      if (r<minR) minR=r; if (r>maxR) maxR=r; if (cc<minC) minC=cc; if (cc>maxC) maxC=cc;
+    }
+    const w = (maxC - minC + 1) * size;
+    const h = (maxR - minR + 1) * size;
+    const ox = Math.floor((c.width - w) / 2);
+    const oy = Math.floor((c.height - h) / 2);
+    for (let r = minR; r <= maxR; r++)
+      for (let cc = minC; cc <= maxC; cc++)
+        if (s[r][cc]) {
+          const x = ox + (cc - minC) * size, y = oy + (r - minR) * size;
+          g.fillStyle = SHAPES[key].color;
+          g.fillRect(x, y, size, size);
+          g.fillStyle = 'rgba(255,255,255,0.2)';
+          g.fillRect(x, y, size, 2);
+          g.fillStyle = 'rgba(0,0,0,0.3)';
+          g.fillRect(x, y + size - 2, size, 2);
+          g.strokeStyle = 'rgba(0,0,0,0.4)';
+          g.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+        }
+  }
+
+  function renderSide() {
+    drawMini('hold', hold);
+    drawMini('next0', nextQueue[0]?.key);
+    drawMini('next1', nextQueue[1]?.key);
+    drawMini('next2', nextQueue[2]?.key);
+  }
+
+  function gravity() { return GRAVITY_MS[Math.min(level - 1, GRAVITY_MS.length - 1)]; }
+
+  function tick(now) {
+    if (state !== 'playing') { requestAnimationFrame(tick); return; }
+    const dt = now - lastFrame;
+    lastFrame = now;
+    dropTimer += dt;
+    if (dropTimer >= gravity()) {
+      dropTimer = 0;
+      if (!collides(current, 0, 1)) { current.y += 1; lockTimer = 0; }
+      else {
+        lockTimer += gravity();
+        if (lockTimer >= LOCK_DELAY) lockPiece();
+      }
+    } else if (collides(current, 0, 1)) {
+      lockTimer += dt;
+      if (lockTimer >= LOCK_DELAY) lockPiece();
+    }
+    draw();
+    renderSide();
+    requestAnimationFrame(tick);
+  }
+
+  function showOverlay(title, msg, btnText = 'START') {
+    const o = document.getElementById('overlay');
+    document.getElementById('overlayTitle').textContent = title;
+    document.getElementById('overlayMsg').textContent = msg;
+    document.getElementById('startBtn').textContent = btnText;
+    o.classList.add('show');
+  }
+  function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+  function startGame() {
+    board = emptyBoard();
+    bag = []; nextQueue = [];
+    refillBag();
+    for (let i = 0; i < 4; i++) nextQueue.push(nextPiece());
+    hold = null; holdUsed = false;
+    score = 0; lines = 0; level = 1;
+    dropTimer = 0; lockTimer = 0; lastFrame = performance.now();
+    spawn();
+    updateStats();
+    hideOverlay();
+    state = 'playing';
+  }
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      showOverlay('PAUSED', 'P 또는 버튼으로 재개', 'RESUME');
+    } else if (state === 'paused') {
+      hideOverlay();
+      lastFrame = performance.now();
+      state = 'playing';
+    }
+  }
+
+  const keyHandlers = {
+    ArrowUp: () => rotate(1),
+    ' ': () => hardDrop(),
+    Shift: () => doHold(),
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'p' || e.key === 'P') {
+      if (state === 'playing' || state === 'paused') { togglePause(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'Enter' && (state === 'menu' || state === 'over')) {
+      startGame(); e.preventDefault(); return;
+    }
+    if (state !== 'playing') return;
+    const h = keyHandlers[e.key];
+    if (h) { h(); e.preventDefault(); }
+  });
+
+  const repeatKeys = {};
+  document.addEventListener('keydown', e => {
+    if (state !== 'playing') return;
+    if (e.repeat) return;
+    if (e.key === 'ArrowLeft') { move(-1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { move(1); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { softDrop(); e.preventDefault(); }
+    else return;
+    if (!repeatKeys[e.key]) {
+      repeatKeys[e.key] = setTimeout(() => {
+        repeatKeys[e.key] = setInterval(() => {
+          if (state !== 'playing') return;
+          if (e.key === 'ArrowLeft') move(-1);
+          else if (e.key === 'ArrowRight') move(1);
+          else if (e.key === 'ArrowDown') softDrop();
+        }, 50);
+      }, 150);
+    }
+  });
+  document.addEventListener('keyup', e => {
+    if (repeatKeys[e.key]) {
+      clearTimeout(repeatKeys[e.key]);
+      clearInterval(repeatKeys[e.key]);
+      repeatKeys[e.key] = null;
+    }
+  });
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    if (state === 'paused') togglePause(); else startGame();
+  });
+
+  document.querySelectorAll('.touch-controls button').forEach(b => {
+    b.addEventListener('click', () => {
+      const act = b.dataset.act;
+      if (act === 'pause') { if (state === 'playing' || state === 'paused') togglePause(); return; }
+      if (state !== 'playing') return;
+      ({ left: () => move(-1), right: () => move(1), down: () => softDrop(),
+         rotate: () => rotate(1), drop: () => hardDrop(), hold: () => doHold() })[act]?.();
     });
-  }
+  });
 
-  async function roll() {
-    if (rolling) return;
-    rolling = true;
-    sumEl.textContent = '…';
-    sumEl.classList.remove('pop');
-    stage.classList.add('shake');
-    setTimeout(() => stage.classList.remove('shake'), 450);
-    const h1 = {}, h2 = {};
-    const [v1, v2] = await Promise.all([rollOne(d1, h1), rollOne(d2, h2)]);
-    sumEl.textContent = v1 + v2;
-    void sumEl.offsetWidth;
-    sumEl.classList.add('pop');
-    rolling = false;
-  }
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e => {
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  });
+  canvas.addEventListener('touchend', e => {
+    if (!touchStart || state !== 'playing') return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+    const dt = Date.now() - touchStart.t;
+    if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 250) rotate(1);
+    else if (Math.abs(dy) > Math.abs(dx) && dy > 40) hardDrop();
+    touchStart = null;
+  });
 
-  ['click', 'touchstart'].forEach(ev =>
-    document.addEventListener(ev, (e) => { e.preventDefault(); roll(); }, { passive: false })
-  );
-  document.addEventListener('keydown', (e) => { if (e.code === 'Space' || e.code === 'Enter') roll(); });
-  setTimeout(roll, 400);
+  showOverlay('TETRIS', '시작하려면 START 또는 Enter');
+  board = emptyBoard();
+  draw();
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
