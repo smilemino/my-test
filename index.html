@@ -3,240 +3,40 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>테트리스</title>
+<title>인사 버튼</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  background: #111;
-  color: #fff;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f4f6fa;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  gap: 20px;
   padding: 16px;
 }
-canvas { display: block; }
-#board { border: 2px solid #444; background: #000; }
-#side { display: flex; flex-direction: column; gap: 12px; min-width: 110px; }
-.panel {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 10px 12px;
+button {
+  padding: 16px 36px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  background: #2563eb;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: transform 0.1s, background 0.2s;
 }
-.panel h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #777; margin-bottom: 6px; }
-.panel .val { font-size: 22px; font-weight: 700; }
-#next-canvas { background: #000; display: block; margin: 0 auto; }
-.keys { font-size: 11px; color: #555; line-height: 1.8; }
-#overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.8);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 14px;
-}
-#overlay h2 { font-size: 30px; font-weight: 700; color: #e74c3c; }
-#final { font-size: 18px; color: #aaa; }
-#restart {
-  padding: 12px 32px; font-size: 16px; font-weight: 700;
-  border: none; border-radius: 8px;
-  background: #e74c3c; color: #fff; cursor: pointer;
-}
-#restart:hover { background: #c0392b; }
-.hidden { display: none !important; }
+button:hover { background: #1d4ed8; }
+button:active { transform: translateY(1px); }
 </style>
 </head>
 <body>
-<canvas id="board" width="300" height="600"></canvas>
-<div id="side">
-  <div class="panel"><h3>점수</h3><div class="val" id="score">0</div></div>
-  <div class="panel"><h3>레벨</h3><div class="val" id="level">1</div></div>
-  <div class="panel"><h3>라인</h3><div class="val" id="lines">0</div></div>
-  <div class="panel">
-    <h3>다음</h3>
-    <canvas id="next-canvas" width="100" height="80"></canvas>
-  </div>
-  <div class="panel keys">
-    ← → &nbsp;이동<br>↑ &nbsp;&nbsp;&nbsp;회전<br>↓ &nbsp;&nbsp;&nbsp;소프트 드롭<br>Space 하드 드롭
-  </div>
-</div>
-<div id="overlay">
-  <h2>게임 오버</h2>
-  <div id="final"></div>
-  <button id="restart">다시 시작</button>
-</div>
+<button id="hi">인사하기</button>
 <script>
-const COLS = 10, ROWS = 20, B = 30;
-const CLR = ['','#00f0f0','#f0f000','#a000f0','#00f000','#f00000','#0000f0','#f0a000'];
-// shapes[type][rot] — flat row-major, sizes: I=4, O=2, rest=3
-const SHP = [null,
-  // I
-  [[0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
-   [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
-   [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0],
-   [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0]],
-  // O
-  [[1,1,1,1]],
-  // T
-  [[0,1,0,1,1,1,0,0,0],[0,1,0,0,1,1,0,1,0],[0,0,0,1,1,1,0,1,0],[0,1,0,1,1,0,0,1,0]],
-  // S
-  [[0,1,1,1,1,0,0,0,0],[0,1,0,0,1,1,0,0,1],[0,0,0,0,1,1,1,1,0],[1,0,0,1,1,0,0,1,0]],
-  // Z
-  [[1,1,0,0,1,1,0,0,0],[0,0,1,0,1,1,0,1,0],[0,0,0,1,1,0,0,1,1],[0,1,0,1,1,0,1,0,0]],
-  // J
-  [[1,0,0,1,1,1,0,0,0],[0,1,1,0,1,0,0,1,0],[0,0,0,1,1,1,0,0,1],[0,1,0,0,1,0,1,1,0]],
-  // L
-  [[0,0,1,1,1,1,0,0,0],[0,1,0,0,1,0,0,1,1],[0,0,0,1,1,1,1,0,0],[1,1,0,0,1,0,0,1,0]],
-];
-const SZ = [null,4,2,3,3,3,3,3];
-
-const bc = document.getElementById('board').getContext('2d');
-const nc = document.getElementById('next-canvas').getContext('2d');
-
-let board, cur, nxt, score, level, linesCleared, dead, dropT, lastT;
-
-function newPiece() {
-  const t = Math.floor(Math.random()*7)+1;
-  return { t, r: 0, x: Math.floor((COLS-SZ[t])/2), y: 0 };
-}
-
-function shape(p) { return SHP[p.t][p.r % SHP[p.t].length]; }
-function sz(p) { return SZ[p.t]; }
-
-function ok(p, dx=0, dy=0, nr=null) {
-  const s = nr!==null ? SHP[p.t][nr%SHP[p.t].length] : shape(p);
-  const n = sz(p);
-  for (let r=0; r<n; r++) for (let c=0; c<n; c++) {
-    if (!s[r*n+c]) continue;
-    const nx=p.x+c+dx, ny=p.y+r+dy;
-    if (nx<0||nx>=COLS||ny>=ROWS) return false;
-    if (ny>=0 && board[ny][nx]) return false;
-  }
-  return true;
-}
-
-function lock() {
-  const s=shape(cur), n=sz(cur);
-  for (let r=0;r<n;r++) for (let c=0;c<n;c++)
-    if (s[r*n+c]) {
-      if (cur.y+r<0) { endGame(); return; }
-      board[cur.y+r][cur.x+c]=cur.t;
-    }
-  sweep();
-  cur=nxt; nxt=newPiece();
-  if (!ok(cur)) { endGame(); return; }
-  updateUI();
-}
-
-function sweep() {
-  let n=0;
-  for (let r=ROWS-1;r>=0;r--) {
-    if (board[r].every(c=>c)) {
-      board.splice(r,1);
-      board.unshift(new Array(COLS).fill(0));
-      n++; r++;
-    }
-  }
-  if (!n) return;
-  score += [0,100,300,500,800][n]*level;
-  linesCleared += n;
-  level = Math.floor(linesCleared/10)+1;
-}
-
-function endGame() {
-  dead=true;
-  document.getElementById('final').textContent='최종 점수: '+score.toLocaleString();
-  document.getElementById('overlay').classList.remove('hidden');
-}
-
-function speed() { return Math.max(80, 1000-(level-1)*90); }
-
-function loop(ts) {
-  if (dead) return;
-  const dt = lastT ? ts-lastT : 0;
-  lastT=ts;
-  dropT+=dt;
-  if (dropT>=speed()) {
-    dropT=0;
-    if (ok(cur,0,1)) cur.y++; else lock();
-  }
-  if (!dead) { render(); requestAnimationFrame(loop); }
-  else render();
-}
-
-function render() {
-  bc.fillStyle='#000'; bc.fillRect(0,0,300,600);
-  bc.strokeStyle='#1a1a1a'; bc.lineWidth=0.5;
-  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) bc.strokeRect(c*B,r*B,B,B);
-  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++)
-    if (board[r][c]) blk(bc,c,r,CLR[board[r][c]]);
-  // ghost
-  const g={...cur}; while(ok(g,0,1)) g.y++;
-  if (g.y!==cur.y) drawPc(bc,g,true);
-  drawPc(bc,cur,false);
-  // next
-  nc.fillStyle='#000'; nc.fillRect(0,0,100,80);
-  const nb=20, n=sz(nxt);
-  const ox=Math.floor((100-n*nb)/2), oy=Math.floor((80-n*nb)/2);
-  const s=shape(nxt);
-  for (let r=0;r<n;r++) for (let c=0;c<n;c++)
-    if (s[r*n+c]) blkAt(nc,ox+c*nb,oy+r*nb,nb,CLR[nxt.t]);
-}
-
-function drawPc(ctx,p,ghost) {
-  const s=shape(p),n=sz(p);
-  for (let r=0;r<n;r++) for (let c=0;c<n;c++)
-    if (s[r*n+c]) blk(ctx,p.x+c,p.y+r,CLR[p.t],ghost);
-}
-
-function blk(ctx,col,row,clr,ghost=false) { blkAt(ctx,col*B,row*B,B,clr,ghost); }
-
-function blkAt(ctx,x,y,s,clr,ghost=false) {
-  if (ghost) {
-    ctx.strokeStyle=clr; ctx.lineWidth=1;
-    ctx.strokeRect(x+1,y+1,s-2,s-2); return;
-  }
-  ctx.fillStyle=clr; ctx.fillRect(x+1,y+1,s-2,s-2);
-  ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(x+1,y+1,s-2,4);
-  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(x+1,y+s-5,s-2,4);
-}
-
-function updateUI() {
-  document.getElementById('score').textContent=score.toLocaleString();
-  document.getElementById('level').textContent=level;
-  document.getElementById('lines').textContent=linesCleared;
-}
-
-function init() {
-  board=Array.from({length:ROWS},()=>new Array(COLS).fill(0));
-  score=0; level=1; linesCleared=0; dead=false; dropT=0; lastT=0;
-  cur=newPiece(); nxt=newPiece();
-  updateUI();
-  document.getElementById('overlay').classList.add('hidden');
-  requestAnimationFrame(loop);
-}
-
-document.addEventListener('keydown',e=>{
-  if (dead) return;
-  if (e.key==='ArrowLeft') { if(ok(cur,-1,0)) cur.x--; }
-  else if (e.key==='ArrowRight') { if(ok(cur,1,0)) cur.x++; }
-  else if (e.key==='ArrowUp') {
-    const nr=(cur.r+1)%SHP[cur.t].length;
-    if(ok(cur,0,0,nr)) cur.r=nr;
-    else if(ok(cur,1,0,nr)){cur.r=nr;cur.x++;}
-    else if(ok(cur,-1,0,nr)){cur.r=nr;cur.x--;}
-  }
-  else if (e.key==='ArrowDown') { if(ok(cur,0,1)){cur.y++;score++;} }
-  else if (e.key===' ') { while(ok(cur,0,1)){cur.y++;score+=2;} lock(); }
-  else return;
-  e.preventDefault();
-  updateUI(); render();
+document.getElementById('hi').addEventListener('click', () => {
+  alert('Hello, 민호님!');
 });
-
-document.getElementById('restart').addEventListener('click',init);
-init();
 </script>
 </body>
 </html>
