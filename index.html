@@ -3,61 +3,196 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<title>한국 시간 (KST)</title>
+<meta name="color-scheme" content="light" />
+<title>한국 시계 (KST)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    background: #0b0d12;
-    color: #f4f6fb;
-    font-family: 'Helvetica Neue', Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    min-height: 100%;
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #e0eafc 0%, #cfd9df 50%, #f5e8ff 100%);
+    color: #2b2f3a;
     display: flex; align-items: center; justify-content: center;
-    text-align: center; padding: 24px;
+    padding: 24px;
   }
-  .wrap { width: 100%; max-width: 720px; }
-  .label { font-size: clamp(14px, 2.2vw, 18px); letter-spacing: .3em; color: #8a93a6; margin-bottom: 18px; }
-  .time {
+  .wrap { width: 100%; max-width: 480px; text-align: center; }
+  .label {
+    font-size: clamp(12px, 2.2vw, 15px);
+    letter-spacing: .4em;
+    color: #6b7488;
+    margin-bottom: 18px;
+  }
+  .clock {
+    position: relative;
+    width: min(78vw, 360px);
+    height: min(78vw, 360px);
+    margin: 0 auto;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow:
+      0 20px 50px rgba(80, 100, 160, .18),
+      inset 0 0 0 1px rgba(0, 0, 0, .04);
+  }
+  .clock svg { width: 100%; height: 100%; display: block; }
+  .tick { stroke: #2b2f3a; stroke-linecap: round; }
+  .tick.major { stroke-width: 3; }
+  .tick.minor { stroke-width: 1; opacity: .35; }
+  .numeral {
+    font-size: 11px;
+    font-weight: 600;
+    fill: #2b2f3a;
+    text-anchor: middle;
+    dominant-baseline: central;
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  }
+  .hand {
+    stroke-linecap: round;
+    transform-origin: 100px 100px;
+  }
+  .hand.hour   { stroke: #2b2f3a; stroke-width: 5; }
+  .hand.minute { stroke: #2b2f3a; stroke-width: 3; }
+  .hand.second { stroke: #e74c3c; stroke-width: 1.5; }
+  .cap { fill: #2b2f3a; }
+  .cap-inner { fill: #e74c3c; }
+  .digital {
+    margin-top: 28px;
     font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
-    font-weight: 700; font-size: clamp(56px, 16vw, 168px);
-    letter-spacing: .02em; line-height: 1;
-    color: #f4f6fb; text-shadow: 0 4px 40px rgba(120,170,255,.25);
+    font-weight: 700;
+    font-size: clamp(32px, 8vw, 52px);
+    letter-spacing: .04em;
+    line-height: 1;
+    color: #2b2f3a;
   }
-  .time .sec { color: #6ea8ff; }
-  .date { margin-top: 22px; font-size: clamp(16px, 3vw, 26px); color: #c4cbdb; }
-  .tz { margin-top: 10px; font-size: clamp(12px, 1.8vw, 15px); color: #6e7a96; letter-spacing: .2em; }
+  .digital .sec { color: #e74c3c; }
+  .date {
+    margin-top: 14px;
+    font-size: clamp(14px, 3vw, 18px);
+    color: #4a5066;
+    font-weight: 500;
+  }
+  .tz {
+    margin-top: 10px;
+    font-size: clamp(11px, 1.8vw, 13px);
+    color: #8089a0;
+    letter-spacing: .25em;
+  }
 </style>
 </head>
 <body>
-  <main class="wrap">
-    <div class="label">KOREA STANDARD TIME</div>
-    <div class="time" id="clock">--:--:--</div>
-    <div class="date" id="date">----년 --월 --일 (-)</div>
-    <div class="tz">Asia / Seoul · UTC+9</div>
-  </main>
+<div class="wrap">
+  <div class="label">KOREAN STANDARD TIME</div>
+  <div class="clock" role="img" aria-label="한국 표준시 아날로그 시계">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <g id="ticks"></g>
+      <g id="numerals"></g>
+      <line id="hour"   class="hand hour"   x1="100" y1="100" x2="100" y2="58"  />
+      <line id="minute" class="hand minute" x1="100" y1="100" x2="100" y2="38"  />
+      <line id="second" class="hand second" x1="100" y1="108" x2="100" y2="28"  />
+      <circle class="cap" cx="100" cy="100" r="5"  />
+      <circle class="cap-inner" cx="100" cy="100" r="2" />
+    </svg>
+  </div>
+  <div class="digital" id="digital" aria-live="polite">--:--:<span class="sec">--</span></div>
+  <div class="date" id="date">----년 --월 --일 ---요일</div>
+  <div class="tz">ASIA / SEOUL · UTC+9</div>
+</div>
 <script>
-  const fmt = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric', month: 'numeric', day: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hourCycle: 'h23', weekday: 'short'
-  });
-  const pad = n => String(n).padStart(2, '0');
-  let timer;
-  function tick() {
-    const now = new Date();
-    const parts = fmt.formatToParts(now);
-    const get = t => parts.find(p => p.type === t)?.value ?? '';
-    document.getElementById('clock').innerHTML =
-      `${pad(get('hour'))}:${pad(get('minute'))}<span class="sec">:${pad(get('second'))}</span>`;
-    document.getElementById('date').textContent =
-      `${get('year')}년 ${pad(get('month'))}월 ${pad(get('day'))}일 (${get('weekday')})`;
-    timer = setTimeout(tick, 1000 - (now.getTime() % 1000));
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { clearTimeout(timer); tick(); }
-  });
-  tick();
+  (function () {
+    'use strict';
+
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var ticksG = document.getElementById('ticks');
+    var numsG  = document.getElementById('numerals');
+    for (var i = 0; i < 60; i++) {
+      var angle = (i * 6) * Math.PI / 180;
+      var isMajor = (i % 5 === 0);
+      var r1 = isMajor ? 82 : 86;
+      var r2 = 92;
+      var x1 = 100 + Math.sin(angle) * r1;
+      var y1 = 100 - Math.cos(angle) * r1;
+      var x2 = 100 + Math.sin(angle) * r2;
+      var y2 = 100 - Math.cos(angle) * r2;
+      var line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('class', 'tick ' + (isMajor ? 'major' : 'minor'));
+      ticksG.appendChild(line);
+    }
+    for (var h = 1; h <= 12; h++) {
+      var a = (h * 30) * Math.PI / 180;
+      var nx = 100 + Math.sin(a) * 70;
+      var ny = 100 - Math.cos(a) * 70;
+      var t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', nx); t.setAttribute('y', ny);
+      t.setAttribute('class', 'numeral');
+      t.textContent = h;
+      numsG.appendChild(t);
+    }
+
+    var hourEl = document.getElementById('hour');
+    var minEl  = document.getElementById('minute');
+    var secEl  = document.getElementById('second');
+    var digEl  = document.getElementById('digital');
+    var dateEl = document.getElementById('date');
+
+    var dayKo = ['일', '월', '화', '수', '목', '금', '토'];
+    var lastDay = -1;
+    var fmtParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, weekday: 'short', fractionalSecondDigits: 3
+    });
+
+    function getKst() {
+      var parts = fmtParts.formatToParts(new Date());
+      var p = {};
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type !== 'literal') p[parts[i].type] = parts[i].value;
+      }
+      var hh = parseInt(p.hour, 10);
+      if (hh === 24) hh = 0;
+      var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+      return {
+        year: parseInt(p.year, 10),
+        month: parseInt(p.month, 10),
+        day: parseInt(p.day, 10),
+        hour: hh,
+        minute: parseInt(p.minute, 10),
+        second: parseInt(p.second, 10),
+        ms: parseInt(p.fractionalSecond || '0', 10),
+        weekday: weekdayMap[p.weekday]
+      };
+    }
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function tick() {
+      var t = getKst();
+      var secFrac = t.second + t.ms / 1000;
+      var minFrac = t.minute + secFrac / 60;
+      var hourFrac = (t.hour % 12) + minFrac / 60;
+
+      secEl.style.transform  = 'rotate(' + (secFrac * 6) + 'deg)';
+      minEl.style.transform  = 'rotate(' + (minFrac * 6) + 'deg)';
+      hourEl.style.transform = 'rotate(' + (hourFrac * 30) + 'deg)';
+
+      digEl.innerHTML = pad(t.hour) + ':' + pad(t.minute) +
+        ':<span class="sec">' + pad(t.second) + '</span>';
+
+      var dayKey = t.year * 10000 + t.month * 100 + t.day;
+      if (dayKey !== lastDay) {
+        lastDay = dayKey;
+        dateEl.textContent = t.year + '년 ' + t.month + '월 ' + t.day + '일 ' +
+          dayKo[t.weekday] + '요일';
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  })();
 </script>
 </body>
 </html>
