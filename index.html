@@ -11,8 +11,8 @@
   body {
     min-height: 100%;
     font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #e0eafc 0%, #cfd9df 50%, #f5e8ff 100%);
-    color: #2b2f3a;
+    background: linear-gradient(135deg, #dce8ff 0%, #edf2ff 50%, #f5f0ff 100%);
+    color: #1a1a2e;
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
   }
@@ -20,7 +20,7 @@
   .label {
     font-size: clamp(12px, 2.2vw, 15px);
     letter-spacing: .4em;
-    color: #6b7488;
+    color: #7a6520;
     margin-bottom: 18px;
   }
   .clock {
@@ -29,19 +29,20 @@
     height: min(78vw, 360px);
     margin: 0 auto;
     border-radius: 50%;
-    background: #ffffff;
+    background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f8f9ff 70%, #eef0fa 100%);
     box-shadow:
-      0 20px 50px rgba(80, 100, 160, .18),
-      inset 0 0 0 1px rgba(0, 0, 0, .04);
+      0 20px 50px rgba(80, 80, 160, .18),
+      0 0 0 1px rgba(180, 160, 80, .35),
+      inset 0 0 30px rgba(180, 160, 220, .08);
   }
   .clock svg { width: 100%; height: 100%; display: block; }
-  .tick { stroke: #2b2f3a; stroke-linecap: round; }
-  .tick.major { stroke-width: 3; }
-  .tick.minor { stroke-width: 1; opacity: .35; }
+  .tick { stroke-linecap: round; }
+  .tick.major { stroke: #c9a227; stroke-width: 3; }
+  .tick.minor { stroke: #9090b0; stroke-width: 1; opacity: .5; }
   .numeral {
     font-size: 11px;
-    font-weight: 600;
-    fill: #2b2f3a;
+    font-weight: 700;
+    fill: #1a1a2e;
     text-anchor: middle;
     dominant-baseline: central;
     font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
@@ -50,11 +51,12 @@
     stroke-linecap: round;
     transform-origin: 100px 100px;
   }
-  .hand.hour   { stroke: #2b2f3a; stroke-width: 5; }
-  .hand.minute { stroke: #2b2f3a; stroke-width: 3; }
-  .hand.second { stroke: #e74c3c; stroke-width: 1.5; }
-  .cap { fill: #2b2f3a; }
-  .cap-inner { fill: #e74c3c; }
+  .hand.hour   { stroke: #1a1a2e; stroke-width: 5; }
+  .hand.minute { stroke: #1a1a2e; stroke-width: 3; }
+  .hand.second { stroke: #c9a227; stroke-width: 1.5;
+                 filter: drop-shadow(0 0 4px rgba(201, 162, 39, .55)); }
+  .cap { fill: #c9a227; }
+  .cap-inner { fill: #ffffff; }
   .digital {
     margin-top: 28px;
     font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
@@ -62,19 +64,19 @@
     font-size: clamp(32px, 8vw, 52px);
     letter-spacing: .04em;
     line-height: 1;
-    color: #2b2f3a;
+    color: #1a1a2e;
   }
-  .digital .sec { color: #e74c3c; }
+  .digital .sec { color: #c9a227; }
   .date {
     margin-top: 14px;
     font-size: clamp(14px, 3vw, 18px);
-    color: #4a5066;
+    color: #4a4060;
     font-weight: 500;
   }
   .tz {
     margin-top: 10px;
     font-size: clamp(11px, 1.8vw, 13px);
-    color: #8089a0;
+    color: #8080a0;
     letter-spacing: .25em;
   }
 </style>
@@ -138,15 +140,34 @@
 
     var dayKo = ['일', '월', '화', '수', '목', '금', '토'];
     var lastDay = -1;
-    var fmtParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Seoul',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false, weekday: 'short', fractionalSecondDigits: 3
-    });
+
+    /* fractionalSecondDigits 미지원 환경 폴백 */
+    var fmtParts, hasFracSec = true;
+    try {
+      fmtParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, weekday: 'short', fractionalSecondDigits: 3
+      });
+      /* 실제 지원 여부 확인 */
+      var testParts = fmtParts.formatToParts(new Date());
+      hasFracSec = testParts.some(function(p) { return p.type === 'fractionalSecond'; });
+    } catch (e) {
+      hasFracSec = false;
+    }
+    if (!hasFracSec) {
+      fmtParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, weekday: 'short'
+      });
+    }
 
     function getKst() {
-      var parts = fmtParts.formatToParts(new Date());
+      var now = new Date();
+      var parts = fmtParts.formatToParts(now);
       var p = {};
       for (var i = 0; i < parts.length; i++) {
         if (parts[i].type !== 'literal') p[parts[i].type] = parts[i].value;
@@ -154,6 +175,9 @@
       var hh = parseInt(p.hour, 10);
       if (hh === 24) hh = 0;
       var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+      var ms = hasFracSec
+        ? parseInt(p.fractionalSecond || '0', 10)
+        : (now.getMilliseconds()); /* 폴백: 로컬 ms 사용 (초 내부 보간용) */
       return {
         year: parseInt(p.year, 10),
         month: parseInt(p.month, 10),
@@ -161,8 +185,8 @@
         hour: hh,
         minute: parseInt(p.minute, 10),
         second: parseInt(p.second, 10),
-        ms: parseInt(p.fractionalSecond || '0', 10),
-        weekday: weekdayMap[p.weekday]
+        ms: ms,
+        weekday: weekdayMap[p.weekday] !== undefined ? weekdayMap[p.weekday] : 0
       };
     }
 
