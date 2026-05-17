@@ -3,281 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>가위바위보</title>
+<title>한국 시간 (KST)</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
-                 "Noto Sans KR", sans-serif;
-    background: radial-gradient(circle at 30% 20%, #1f2440 0%, #0d1020 60%, #06070f 100%);
-    color: #e8ecf5;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 24px 16px 40px;
-    transition: background 0.6s ease;
+    background: #0b0d12;
+    color: #f4f6fb;
+    font-family: 'Helvetica Neue', Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
   }
-  body.win  { background: radial-gradient(circle at 30% 20%, #1c3a2a 0%, #0d2018 60%, #06120a 100%); }
-  body.lose { background: radial-gradient(circle at 30% 20%, #3a1c24 0%, #200d12 60%, #120608 100%); }
-  body.draw { background: radial-gradient(circle at 30% 20%, #34341c 0%, #1f1f0d 60%, #121206 100%); }
-
-  h1 {
-    font-size: clamp(22px, 4vw, 32px);
-    letter-spacing: 0.04em;
-    margin: 8px 0 4px;
-    font-weight: 700;
+  .wrap { width: 100%; max-width: 720px; }
+  .label { font-size: clamp(14px, 2.2vw, 18px); letter-spacing: .3em; color: #8a93a6; margin-bottom: 18px; }
+  .time {
+    font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+    font-weight: 700; font-size: clamp(56px, 16vw, 168px);
+    letter-spacing: .02em; line-height: 1;
+    color: #f4f6fb; text-shadow: 0 4px 40px rgba(120,170,255,.25);
   }
-  .subtitle {
-    opacity: 0.65;
-    font-size: 13px;
-    margin-bottom: 24px;
-  }
-
-  .scoreboard {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .score {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 10px 18px;
-    min-width: 90px;
-    text-align: center;
-  }
-  .score .label { font-size: 12px; opacity: 0.7; }
-  .score .value { font-size: 22px; font-weight: 700; margin-top: 2px; }
-  .score.win  .value { color: #6ee7a8; }
-  .score.lose .value { color: #ff7a8a; }
-  .score.draw .value { color: #f6d36a; }
-
-  .battle {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    max-width: 480px;
-    margin: 10px 0 24px;
-  }
-  .player {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .player .name {
-    font-size: 12px;
-    opacity: 0.7;
-    letter-spacing: 0.08em;
-  }
-  .hand {
-    width: clamp(96px, 28vw, 140px);
-    height: clamp(96px, 28vw, 140px);
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(48px, 14vw, 72px);
-    line-height: 1;
-  }
-  .hand.shake { animation: shake 0.4s ease-in-out 2; }
-  .hand.pop   { animation: pop 0.35s ease-out; }
-
-  @keyframes shake {
-    0%, 100% { transform: translateY(0) rotate(0); }
-    25%      { transform: translateY(-6px) rotate(-6deg); }
-    75%      { transform: translateY(-6px) rotate(6deg); }
-  }
-  @keyframes pop {
-    0%   { transform: scale(0.6); opacity: 0; }
-    60%  { transform: scale(1.1); opacity: 1; }
-    100% { transform: scale(1); }
-  }
-
-  .vs {
-    font-size: 18px;
-    font-weight: 700;
-    opacity: 0.5;
-  }
-
-  .result {
-    min-height: 32px;
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 22px;
-    letter-spacing: 0.04em;
-    text-align: center;
-  }
-  .result.win  { color: #6ee7a8; }
-  .result.lose { color: #ff7a8a; }
-  .result.draw { color: #f6d36a; }
-
-  .choices {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 18px;
-  }
-  .choice {
-    appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-    color: #e8ecf5;
-    border-radius: 16px;
-    padding: 14px 18px;
-    min-width: 96px;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
-  }
-  .choice .emoji { font-size: 36px; line-height: 1; }
-  .choice:hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255,255,255,0.22); }
-  .choice:active { transform: scale(0.96); }
-  .choice:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .reset {
-    appearance: none;
-    background: transparent;
-    color: #aab3c5;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-    padding: 8px 14px;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  .reset:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+  .time .sec { color: #6ea8ff; }
+  .date { margin-top: 22px; font-size: clamp(16px, 3vw, 26px); color: #c4cbdb; }
+  .tz { margin-top: 10px; font-size: clamp(12px, 1.8vw, 14px); color: #5b6478; letter-spacing: .2em; }
 </style>
 </head>
 <body>
-  <h1>가위 · 바위 · 보</h1>
-  <div class="subtitle">아래 버튼을 눌러 컴퓨터와 대결하세요</div>
-
-  <div class="scoreboard">
-    <div class="score win"><div class="label">승</div><div class="value" id="winCount">0</div></div>
-    <div class="score draw"><div class="label">무</div><div class="value" id="drawCount">0</div></div>
-    <div class="score lose"><div class="label">패</div><div class="value" id="loseCount">0</div></div>
-  </div>
-
-  <div class="battle">
-    <div class="player">
-      <div class="name">나</div>
-      <div class="hand" id="playerHand">✋</div>
-    </div>
-    <div class="vs">VS</div>
-    <div class="player">
-      <div class="name">컴퓨터</div>
-      <div class="hand" id="cpuHand">✋</div>
-    </div>
-  </div>
-
-  <div class="result" id="result">가위, 바위, 보 중 하나를 고르세요</div>
-
-  <div class="choices">
-    <button class="choice" data-move="scissors"><span class="emoji">✌️</span><span>가위</span></button>
-    <button class="choice" data-move="rock"><span class="emoji">✊</span><span>바위</span></button>
-    <button class="choice" data-move="paper"><span class="emoji">✋</span><span>보</span></button>
-  </div>
-
-  <button class="reset" id="resetBtn">전적 초기화</button>
-
+  <main class="wrap">
+    <div class="label">KOREA STANDARD TIME</div>
+    <div class="time" id="clock">--:--:--</div>
+    <div class="date" id="date">----년 --월 --일 (-)</div>
+    <div class="tz">Asia / Seoul · UTC+9</div>
+  </main>
 <script>
-(() => {
-  const EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
-  const MOVES = ["rock", "paper", "scissors"];
-  const LABEL = { rock: "바위", paper: "보", scissors: "가위" };
-
-  const $ = (id) => document.getElementById(id);
-  const playerHand = $("playerHand");
-  const cpuHand    = $("cpuHand");
-  const result     = $("result");
-  const winEl      = $("winCount");
-  const drawEl     = $("drawCount");
-  const loseEl     = $("loseCount");
-  const buttons    = document.querySelectorAll(".choice");
-  let busy = false;
-  const score = { win: 0, draw: 0, lose: 0 };
-
-  function judge(p, c) {
-    if (p === c) return "draw";
-    if (
-      (p === "rock"     && c === "scissors") ||
-      (p === "scissors" && c === "paper")    ||
-      (p === "paper"    && c === "rock")
-    ) return "win";
-    return "lose";
-  }
-
-  function play(playerMove) {
-    if (busy) return;
-    busy = true;
-    document.body.classList.remove("win", "lose", "draw");
-    result.className = "result";
-    result.textContent = "두구두구...";
-    playerHand.classList.remove("pop");
-    cpuHand.classList.remove("pop");
-    void playerHand.offsetWidth;
-    playerHand.classList.add("shake");
-    cpuHand.classList.add("shake");
-    buttons.forEach((b) => (b.disabled = true));
-
-    setTimeout(() => {
-      const cpuMove = MOVES[Math.floor(Math.random() * 3)];
-      playerHand.classList.remove("shake");
-      cpuHand.classList.remove("shake");
-      playerHand.textContent = EMOJI[playerMove];
-      cpuHand.textContent    = EMOJI[cpuMove];
-      void playerHand.offsetWidth;
-      playerHand.classList.add("pop");
-      cpuHand.classList.add("pop");
-
-      const r = judge(playerMove, cpuMove);
-      score[r] += 1;
-      winEl.textContent  = score.win;
-      drawEl.textContent = score.draw;
-      loseEl.textContent = score.lose;
-
-      const msg = {
-        win:  `이겼습니다! ${LABEL[playerMove]} 〉 ${LABEL[cpuMove]}`,
-        lose: `졌습니다... ${LABEL[cpuMove]} 〉 ${LABEL[playerMove]}`,
-        draw: `비겼습니다 (${LABEL[playerMove]})`,
-      }[r];
-      result.textContent = msg;
-      result.classList.add(r);
-      document.body.classList.add(r);
-
-      buttons.forEach((b) => (b.disabled = false));
-      busy = false;
-    }, 850);
-  }
-
-  buttons.forEach((b) => {
-    b.addEventListener("click", () => play(b.dataset.move));
+  const fmt = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23', weekday: 'short'
   });
-
-  $("resetBtn").addEventListener("click", () => {
-    score.win = score.draw = score.lose = 0;
-    winEl.textContent = drawEl.textContent = loseEl.textContent = 0;
-    result.textContent = "가위, 바위, 보 중 하나를 고르세요";
-    result.className = "result";
-    document.body.classList.remove("win", "lose", "draw");
-    playerHand.textContent = "✋";
-    cpuHand.textContent    = "✋";
-  });
-})();
+  const pad = n => String(n).padStart(2, '0');
+  function tick() {
+    const parts = fmt.formatToParts(new Date());
+    const get = t => parts.find(p => p.type === t)?.value ?? '';
+    document.getElementById('clock').innerHTML =
+      `${pad(get('hour'))}:${pad(get('minute'))}<span class="sec">:${pad(get('second'))}</span>`;
+    document.getElementById('date').textContent =
+      `${get('year')}년 ${pad(get('month'))}월 ${pad(get('day'))}일 (${get('weekday')})`;
+  }
+  tick(); setInterval(tick, 1000);
 </script>
 </body>
 </html>
