@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
+<meta name="color-scheme" content="light" />
 <title>한국 시계 (KST)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,9 +11,8 @@
   body {
     min-height: 100%;
     font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
-    background:
-      radial-gradient(ellipse at 50% 30%, #1b2236 0%, #0a0d18 60%, #05060c 100%);
-    color: #e8d9a8;
+    background: linear-gradient(160deg, #dce8f5 0%, #eef4fb 45%, #e4eef8 100%);
+    color: #2d3a4f;
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
   }
@@ -21,9 +20,8 @@
   .label {
     font-size: clamp(12px, 2.2vw, 15px);
     letter-spacing: .4em;
-    color: #d4af37;
+    color: #5a7fa8;
     margin-bottom: 18px;
-    text-shadow: 0 0 12px rgba(212, 175, 55, .35);
   }
   .clock {
     position: relative;
@@ -31,21 +29,20 @@
     height: min(78vw, 360px);
     margin: 0 auto;
     border-radius: 50%;
-    background:
-      radial-gradient(circle at 50% 45%, #1a2138 0%, #0d1124 70%, #070912 100%);
+    background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f8fafc 70%, #f0f4f8 100%);
     box-shadow:
-      0 20px 50px rgba(0, 0, 0, .55),
-      0 0 0 1px rgba(212, 175, 55, .35),
-      inset 0 0 30px rgba(212, 175, 55, .08);
+      0 12px 40px rgba(80, 120, 180, .18),
+      0 0 0 1px rgba(100, 140, 190, .25),
+      inset 0 0 20px rgba(100, 140, 200, .04);
   }
   .clock svg { width: 100%; height: 100%; display: block; }
-  .tick { stroke: #d4af37; stroke-linecap: round; }
+  .tick { stroke: #8aadcc; stroke-linecap: round; }
   .tick.major { stroke-width: 3; }
-  .tick.minor { stroke-width: 1; opacity: .35; }
+  .tick.minor { stroke-width: 1; opacity: .45; }
   .numeral {
     font-size: 12px;
     font-weight: 700;
-    fill: #f1d97c;
+    fill: #2d3a4f;
     text-anchor: middle;
     dominant-baseline: central;
     font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
@@ -55,14 +52,13 @@
     transform-origin: 100px 100px;
     transition: none;
     will-change: transform;
-    filter: drop-shadow(0 0 4px rgba(212, 175, 55, .35));
   }
-  .hand.hour   { stroke: #f5e7b2; stroke-width: 5; }
-  .hand.minute { stroke: #f5e7b2; stroke-width: 3; }
-  .hand.second { stroke: #ffb74d; stroke-width: 1.5;
-                 filter: drop-shadow(0 0 6px rgba(255, 183, 77, .65)); }
-  .cap { fill: #d4af37; }
-  .cap-inner { fill: #ffb74d; }
+  .hand.hour   { stroke: #2d3a4f; stroke-width: 5; }
+  .hand.minute { stroke: #2d3a4f; stroke-width: 3; }
+  .hand.second { stroke: #e53935; stroke-width: 1.5;
+                 filter: drop-shadow(0 0 3px rgba(229, 57, 53, .5)); }
+  .cap { fill: #8aadcc; }
+  .cap-inner { fill: #e53935; }
   .digital {
     margin-top: 28px;
     font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
@@ -70,20 +66,19 @@
     font-size: clamp(32px, 8vw, 52px);
     letter-spacing: .04em;
     line-height: 1;
-    color: #f5e7b2;
-    text-shadow: 0 0 18px rgba(212, 175, 55, .35);
+    color: #2d3a4f;
   }
-  .digital .sec { color: #ffb74d; }
+  .digital .sec { color: #e53935; }
   .date {
     margin-top: 14px;
     font-size: clamp(14px, 3vw, 18px);
-    color: #c9b97a;
+    color: #4a6680;
     font-weight: 500;
   }
   .tz {
     margin-top: 10px;
     font-size: clamp(11px, 1.8vw, 13px);
-    color: #8a7a45;
+    color: #8aadcc;
     letter-spacing: .25em;
   }
 </style>
@@ -148,16 +143,16 @@
     var dayKo = ['일', '월', '화', '수', '목', '금', '토'];
     var lastDay = -1;
 
-    /* fractionalSecondDigits 미지원 환경 폴백 */
+    /* hourCycle:'h23' → 0~23 보장, 자정 24 표기 방지 */
     var fmtParts, hasFracSec = true;
     try {
       fmtParts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Seoul',
+        hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false, weekday: 'short', fractionalSecondDigits: 3
+        weekday: 'short', fractionalSecondDigits: 3
       });
-      /* 실제 지원 여부 확인 */
       var testParts = fmtParts.formatToParts(new Date());
       hasFracSec = testParts.some(function(p) { return p.type === 'fractionalSecond'; });
     } catch (e) {
@@ -166,9 +161,10 @@
     if (!hasFracSec) {
       fmtParts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Seoul',
+        hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false, weekday: 'short'
+        weekday: 'short'
       });
     }
 
@@ -182,9 +178,10 @@
       var hh = parseInt(p.hour, 10);
       if (hh === 24) hh = 0;
       var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+      /* hasFracSec false 시 로컬 ms 사용 — 초 내부 보간용이므로 KST 오프셋 불필요 */
       var ms = hasFracSec
         ? parseInt(p.fractionalSecond || '0', 10)
-        : (now.getMilliseconds()); /* 폴백: 로컬 ms 사용 (초 내부 보간용) */
+        : now.getMilliseconds();
       return {
         year: parseInt(p.year, 10),
         month: parseInt(p.month, 10),
@@ -199,6 +196,7 @@
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
+    /* 아날로그·디지털 동일 getKst() 호출로 초 경계 불일치 제거 */
     function tick() {
       var t = getKst();
       var secFrac = t.second + t.ms / 1000;
