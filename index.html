@@ -178,10 +178,10 @@
       var hh = parseInt(p.hour, 10);
       if (hh === 24) hh = 0;
       var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-      /* hasFracSec false 시 로컬 ms 사용 — 초 내부 보간용이므로 KST 오프셋 불필요 */
+      /* 폴백 ms: UTC 오프셋은 항상 정수 분 단위 → ms 내부 값은 KST와 동일 */
       var ms = hasFracSec
         ? parseInt(p.fractionalSecond || '0', 10)
-        : now.getMilliseconds();
+        : (Date.now() % 1000);
       return {
         year: parseInt(p.year, 10),
         month: parseInt(p.month, 10),
@@ -196,7 +196,7 @@
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
-    /* 아날로그·디지털 동일 getKst() 호출로 초 경계 불일치 제거 */
+    /* KST 기준: 아날로그·디지털 모두 getKst() 반환값(h/m/s/ms) 사용 — 로컬 Date 직접 사용 없음 */
     function tick() {
       var t = getKst();
       var secFrac = t.second + t.ms / 1000;
