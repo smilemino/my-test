@@ -3,224 +3,55 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<title>한국 시계 (KST)</title>
+<title>클릭 카운터</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
     min-height: 100%;
-    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
-    background: radial-gradient(ellipse at 50% 30%, #1a1f2e 0%, #0d1117 60%, #000509 100%);
-    color: #f5e7b2;
-    display: flex; align-items: center; justify-content: center;
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+    background: #0d1117;
+    color: #f5f5f5;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 28px;
     padding: 24px;
   }
-  .wrap { width: 100%; max-width: 480px; text-align: center; }
-  .label {
-    font-size: clamp(12px, 2.2vw, 15px);
-    letter-spacing: .4em;
-    color: #c9a227;
-    margin-bottom: 18px;
-  }
-  .clock {
-    position: relative;
-    width: min(78vw, 360px);
-    height: min(78vw, 360px);
-    margin: 0 auto;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 45%, #1e2236 0%, #141828 70%, #0d1020 100%);
-    box-shadow:
-      0 12px 40px rgba(212, 175, 55, .20),
-      0 0 0 1px rgba(212, 175, 55, .22),
-      inset 0 0 20px rgba(212, 175, 55, .04);
-  }
-  .clock svg { width: 100%; height: 100%; display: block; }
-  .tick { stroke: #d4af37; stroke-linecap: round; }
-  .tick.major { stroke-width: 3; }
-  .tick.minor { stroke-width: 1; opacity: .45; }
-  .numeral {
-    font-size: 12px;
+  #count {
+    font-size: clamp(48px, 12vw, 96px);
     font-weight: 700;
-    fill: #d4af37;
-    text-anchor: middle;
-    dominant-baseline: central;
-    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    font-variant-numeric: tabular-nums;
+    color: #ffb74d;
   }
-  .hand {
-    stroke-linecap: round;
-    transform-origin: 100px 100px;
-    transition: none;
-    will-change: transform;
-  }
-  .hand.hour   { stroke: #f5e7b2; stroke-width: 5; filter: drop-shadow(0 0 4px rgba(245, 231, 178, .6)); }
-  .hand.minute { stroke: #f5e7b2; stroke-width: 3; filter: drop-shadow(0 0 3px rgba(245, 231, 178, .5)); }
-  .hand.second { stroke: #ffb74d; stroke-width: 1.5;
-                 filter: drop-shadow(0 0 5px rgba(255, 183, 77, .8)); }
-  .cap { fill: #d4af37; }
-  .cap-inner { fill: #ffb74d; }
-  .digital {
-    margin-top: 28px;
-    font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  #btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    padding: 18px 48px;
+    font-size: clamp(18px, 3vw, 24px);
     font-weight: 700;
-    font-size: clamp(32px, 8vw, 52px);
-    letter-spacing: .04em;
-    line-height: 1;
-    color: #d4af37;
+    color: #0d1117;
+    background: #ffb74d;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(255, 183, 77, .35);
+    transition: transform .08s ease, box-shadow .15s ease;
   }
-  .digital .sec { color: #ffb74d; }
-  .date {
-    margin-top: 14px;
-    font-size: clamp(14px, 3vw, 18px);
-    color: #c9a227;
-    font-weight: 500;
-  }
-  .tz {
-    margin-top: 10px;
-    font-size: clamp(11px, 1.8vw, 13px);
-    color: #8a7040;
-    letter-spacing: .25em;
-  }
+  #btn:hover { box-shadow: 0 10px 28px rgba(255, 183, 77, .5); }
+  #btn:active { transform: scale(.96); }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="label">KOREAN STANDARD TIME</div>
-  <div class="clock" role="img" aria-label="한국 표준시 아날로그 시계">
-    <svg viewBox="0 0 200 200" aria-hidden="true">
-      <g id="ticks"></g>
-      <g id="numerals"></g>
-      <line id="hour"   class="hand hour"   x1="100" y1="100" x2="100" y2="58"  />
-      <line id="minute" class="hand minute" x1="100" y1="100" x2="100" y2="38"  />
-      <line id="second" class="hand second" x1="100" y1="108" x2="100" y2="28"  />
-      <circle class="cap" cx="100" cy="100" r="5"  />
-      <circle class="cap-inner" cx="100" cy="100" r="2" />
-    </svg>
-  </div>
-  <div class="digital" id="digital" aria-live="polite">--:--:<span class="sec">--</span></div>
-  <div class="date" id="date">----년 --월 --일 ---요일</div>
-  <div class="tz">ASIA / SEOUL · UTC+9</div>
-</div>
+  <div id="count" aria-live="polite">0</div>
+  <button id="btn" type="button">클릭</button>
 <script>
   (function () {
     'use strict';
-
-    var svgNS = 'http://www.w3.org/2000/svg';
-    var ticksG = document.getElementById('ticks');
-    var numsG  = document.getElementById('numerals');
-    for (var i = 0; i < 60; i++) {
-      var angle = (i * 6) * Math.PI / 180;
-      var isMajor = (i % 5 === 0);
-      var r1 = isMajor ? 82 : 86;
-      var r2 = 92;
-      var x1 = 100 + Math.sin(angle) * r1;
-      var y1 = 100 - Math.cos(angle) * r1;
-      var x2 = 100 + Math.sin(angle) * r2;
-      var y2 = 100 - Math.cos(angle) * r2;
-      var line = document.createElementNS(svgNS, 'line');
-      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-      line.setAttribute('class', 'tick ' + (isMajor ? 'major' : 'minor'));
-      ticksG.appendChild(line);
-    }
-    for (var h = 1; h <= 12; h++) {
-      var a = (h * 30) * Math.PI / 180;
-      var nx = 100 + Math.sin(a) * 70;
-      var ny = 100 - Math.cos(a) * 70;
-      var t = document.createElementNS(svgNS, 'text');
-      t.setAttribute('x', nx); t.setAttribute('y', ny);
-      t.setAttribute('class', 'numeral');
-      t.textContent = h;
-      numsG.appendChild(t);
-    }
-
-    var hourEl = document.getElementById('hour');
-    var minEl  = document.getElementById('minute');
-    var secEl  = document.getElementById('second');
-    var digEl  = document.getElementById('digital');
-    var dateEl = document.getElementById('date');
-
-    var dayKo = ['일', '월', '화', '수', '목', '금', '토'];
-    var lastDay = -1;
-
-    /* hourCycle:'h23' → 0~23 보장, 자정 24 표기 방지 */
-    var fmtParts, hasFracSec = true;
-    try {
-      fmtParts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Seoul',
-        hourCycle: 'h23',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        weekday: 'short', fractionalSecondDigits: 3
-      });
-      var testParts = fmtParts.formatToParts(new Date());
-      hasFracSec = testParts.some(function(p) { return p.type === 'fractionalSecond'; });
-    } catch (e) {
-      hasFracSec = false;
-    }
-    if (!hasFracSec) {
-      fmtParts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Seoul',
-        hourCycle: 'h23',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        weekday: 'short'
-      });
-    }
-
-    function getKst() {
-      var now = new Date();
-      var parts = fmtParts.formatToParts(now);
-      var p = {};
-      for (var i = 0; i < parts.length; i++) {
-        if (parts[i].type !== 'literal') p[parts[i].type] = parts[i].value;
-      }
-      var hh = parseInt(p.hour, 10);
-      if (hh === 24) hh = 0;
-      var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-      /* 폴백 ms: UTC 오프셋은 항상 정수 분 단위 → ms 내부 값은 KST와 동일 */
-      var ms = hasFracSec
-        ? parseInt(p.fractionalSecond || '0', 10)
-        : (Date.now() % 1000);
-      return {
-        year: parseInt(p.year, 10),
-        month: parseInt(p.month, 10),
-        day: parseInt(p.day, 10),
-        hour: hh,
-        minute: parseInt(p.minute, 10),
-        second: parseInt(p.second, 10),
-        ms: ms,
-        weekday: weekdayMap[p.weekday] !== undefined ? weekdayMap[p.weekday] : 0
-      };
-    }
-
-    function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-    /* KST 기준: 아날로그·디지털 모두 getKst() 반환값(h/m/s/ms) 사용 — 로컬 Date 직접 사용 없음 */
-    function tick() {
-      var t = getKst();
-      var secFrac = t.second + t.ms / 1000;
-      var minFrac = t.minute + secFrac / 60;
-      var hourFrac = (t.hour % 12) + minFrac / 60;
-
-      secEl.style.transform  = 'rotate(' + (secFrac * 6) + 'deg)';
-      minEl.style.transform  = 'rotate(' + (minFrac * 6) + 'deg)';
-      hourEl.style.transform = 'rotate(' + (hourFrac * 30) + 'deg)';
-
-      digEl.innerHTML = pad(t.hour) + ':' + pad(t.minute) +
-        ':<span class="sec">' + pad(t.second) + '</span>';
-
-      var dayKey = t.year * 10000 + t.month * 100 + t.day;
-      if (dayKey !== lastDay) {
-        lastDay = dayKey;
-        dateEl.textContent = t.year + '년 ' + t.month + '월 ' + t.day + '일 ' +
-          dayKo[t.weekday] + '요일';
-      }
-
-      requestAnimationFrame(tick);
-    }
-
-    requestAnimationFrame(tick);
+    var n = 0;
+    var countEl = document.getElementById('count');
+    document.getElementById('btn').addEventListener('click', function () {
+      n += 1;
+      countEl.textContent = n;
+    });
   })();
 </script>
 </body>
