@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>색깔 버튼</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 24px;
+    transition: background-color 400ms ease;
+  }
+  #hex {
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: clamp(28px, 7vw, 56px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    user-select: all;
+  }
+  #btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(18px, 4vw, 22px);
+    font-weight: 700;
+    color: #1a1a1a;
+    background: #fff;
+    padding: 16px 40px;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  #btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.3); }
+  #btn:active { transform: translateY(1px); box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  .hint { font-size: 14px; opacity: 0.7; }
+</style>
+</head>
+<body>
+  <div id="hex"></div>
+  <button id="btn" type="button">색깔 바꾸기</button>
+  <div class="hint">버튼을 누르면 배경색이 무작위로 바뀝니다</div>
+<script>
+  const body = document.body;
+  const hexEl = document.getElementById('hex');
+  const btn = document.getElementById('btn');
+  const toHex = (n) => n.toString(16).padStart(2, '0').toUpperCase();
+  const randomColor = () => {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+    return { hex: `#${toHex(r)}${toHex(g)}${toHex(b)}`, r, g, b };
+  };
+  const apply = () => {
+    const { hex, r, g, b } = randomColor();
+    body.style.backgroundColor = hex;
+    hexEl.textContent = hex;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    body.style.color = luminance > 0.6 ? '#1a1a1a' : '#ffffff';
+    btn.style.color = luminance > 0.6 ? '#1a1a1a' : '#1a1a1a';
+  };
+  btn.addEventListener('click', apply);
+  const initHex = () => {
+    const bg = getComputedStyle(body).backgroundColor;
+    const [r, g, b] = bg.match(/\d+/g).map(Number);
+    hexEl.textContent = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+  initHex();
+</script>
+</body>
+</html>
