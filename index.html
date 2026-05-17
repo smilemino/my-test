@@ -42,15 +42,21 @@
     hourCycle: 'h23', weekday: 'short'
   });
   const pad = n => String(n).padStart(2, '0');
+  let timer;
   function tick() {
-    const parts = fmt.formatToParts(new Date());
+    const now = new Date();
+    const parts = fmt.formatToParts(now);
     const get = t => parts.find(p => p.type === t)?.value ?? '';
     document.getElementById('clock').innerHTML =
       `${pad(get('hour'))}:${pad(get('minute'))}<span class="sec">:${pad(get('second'))}</span>`;
     document.getElementById('date').textContent =
       `${get('year')}년 ${pad(get('month'))}월 ${pad(get('day'))}일 (${get('weekday')})`;
+    timer = setTimeout(tick, 1000 - (now.getTime() % 1000));
   }
-  tick(); setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { clearTimeout(timer); tick(); }
+  });
+  tick();
 </script>
 </body>
 </html>
