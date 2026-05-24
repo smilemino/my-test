@@ -3,52 +3,188 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>고마워</title>
+<title>주사위 게임</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #000;
-  color: #fff;
+  background: linear-gradient(160deg, #0f172a, #1e293b);
+  color: #f8fafc;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  gap: 40px;
+  padding: 24px;
+  gap: 28px;
 }
-button {
-  padding: 16px 40px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #000;
+h1 { font-size: 22px; letter-spacing: 0.04em; opacity: 0.85; font-weight: 600; }
+.dice {
+  width: min(50vw, 220px);
+  aspect-ratio: 1;
   background: #fff;
+  border-radius: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 18px;
+  gap: 6px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.45), inset 0 -6px 0 rgba(0,0,0,0.08);
+  transition: transform 0.12s;
+}
+.dice.rolling { animation: roll 1s ease-in-out; }
+@keyframes roll {
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(180deg) scale(0.92); }
+  50%  { transform: rotate(360deg) scale(1.05); }
+  75%  { transform: rotate(540deg) scale(0.95); }
+  100% { transform: rotate(720deg) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .dice.rolling { animation: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.cell { display: flex; align-items: center; justify-content: center; }
+.dot { width: 22%; aspect-ratio: 1; background: #0f172a; border-radius: 50%; }
+@media (max-width: 480px) { .dot { width: 28%; } }
+button {
+  padding: 14px 36px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #fbbf24;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.2s;
+  transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.35);
 }
-button:hover { opacity: 0.85; }
-button:active { transform: translateY(2px); }
+button:hover:not(:disabled) { opacity: 0.92; }
+button:active:not(:disabled) { transform: translateY(2px); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
 button:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-#msg {
-  font-size: 72px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  min-height: 96px;
-  visibility: hidden;
+.stats {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+  opacity: 0.9;
+  flex-wrap: wrap;
+  justify-content: center;
 }
-#msg.show { visibility: visible; }
+.stats span b { color: #fbbf24; font-weight: 700; margin-left: 4px; }
+.history {
+  display: flex;
+  gap: 8px;
+  min-height: 36px;
+  align-items: center;
+}
+.history .h {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.history .h:first-child { background: #fbbf24; color: #0f172a; }
+.label { font-size: 12px; opacity: 0.6; letter-spacing: 0.08em; }
+.open-tab {
+  background: transparent;
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.4);
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+.open-tab:hover { background: rgba(251,191,36,0.12); }
+.open-tab:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 </style>
 </head>
 <body>
-<button id="btn">눌러보세요</button>
-<div id="msg">고마워</div>
+<h1>🎲 주사위 굴리기</h1>
+<div class="dice" id="dice" aria-label="주사위"></div>
+<button id="rollBtn">굴리기</button>
+<div class="stats">
+  <span>횟수<b id="count">0</b></span>
+  <span>합계<b id="sum">0</b></span>
+  <span>평균<b id="avg">–</b></span>
+</div>
+<div class="label">최근 5회</div>
+<div class="history" id="history"></div>
+<button class="open-tab" id="openTabBtn">새 탭에서 열기</button>
+<div aria-live="polite" aria-atomic="true" class="sr-only" id="announce"></div>
 <script>
-document.getElementById('btn').addEventListener('click', () => {
-  document.getElementById('msg').classList.add('show');
-});
+const PATTERNS = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8]
+};
+const dice = document.getElementById('dice');
+const btn = document.getElementById('rollBtn');
+const $count = document.getElementById('count');
+const $sum = document.getElementById('sum');
+const $avg = document.getElementById('avg');
+const $history = document.getElementById('history');
+let rolls = [];
+
+function render(face) {
+  dice.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    if (PATTERNS[face].includes(i)) {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      c.appendChild(d);
+    }
+    dice.appendChild(c);
+  }
+}
+
+function updateStats() {
+  const n = rolls.length;
+  const sum = rolls.reduce((a, b) => a + b, 0);
+  $count.textContent = n;
+  $sum.textContent = sum;
+  $avg.textContent = n ? (sum / n).toFixed(2) : '–';
+  $history.innerHTML = '';
+  rolls.slice(-5).reverse().forEach(v => {
+    const e = document.createElement('div');
+    e.className = 'h';
+    e.textContent = v;
+    $history.appendChild(e);
+  });
+}
+
+function roll() {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  dice.classList.add('rolling');
+  const flicker = setInterval(() => render(1 + Math.floor(Math.random() * 6)), 100);
+  setTimeout(() => {
+    clearInterval(flicker);
+    try {
+      const face = 1 + Math.floor(Math.random() * 6);
+      render(face);
+      rolls.push(face);
+      updateStats();
+      document.getElementById('announce').textContent = `주사위 결과: ${face}점`;
+      dice.classList.remove('rolling');
+    } finally {
+      btn.disabled = false;
+    }
+  }, 1000);
+}
+
+render(1);
+updateStats();
+btn.addEventListener('click', roll);
+document.getElementById('openTabBtn').addEventListener('click', () => window.open(location.href, '_blank'));
 </script>
 </body>
 </html>
